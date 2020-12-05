@@ -10,20 +10,20 @@ def load_IMDB_data(prefix='data/preprocessed/IMDB_processed'):
     G10 = nx.read_adjlist(prefix + '/1/1-0-1.adjlist', create_using=nx.MultiDiGraph)
     G11 = nx.read_adjlist(prefix + '/1/1-0-2-0-1.adjlist', create_using=nx.MultiDiGraph)
     G20 = nx.read_adjlist(prefix + '/2/2-0-2.adjlist', create_using=nx.MultiDiGraph)
-    G21 = nx.read_adjlist(prefix + '/2/2-0-1-0-2.adjlist', create_using=nx.MultiDiGraph)
-    idx00 = np.load(prefix + '/0/0-1-0_idx.npy')
+    G21 = nx.read_adjlist(prefix + '/2/2-0-1-0-2.adjlist', create_using=nx.MultiDiGraph)        # node types - 0: M, 1: D, 2: A
+    idx00 = np.load(prefix + '/0/0-1-0_idx.npy')        # each row is a set of node indexes on a metapath
     idx01 = np.load(prefix + '/0/0-2-0_idx.npy')
     idx10 = np.load(prefix + '/1/1-0-1_idx.npy')
     idx11 = np.load(prefix + '/1/1-0-2-0-1_idx.npy')
     idx20 = np.load(prefix + '/2/2-0-2_idx.npy')
     idx21 = np.load(prefix + '/2/2-0-1-0-2_idx.npy')
-    features_0 = scipy.sparse.load_npz(prefix + '/features_0.npz')
+    features_0 = scipy.sparse.load_npz(prefix + '/features_0.npz')      # 3066 dim sparse feature matrix. can have weight.
     features_1 = scipy.sparse.load_npz(prefix + '/features_1.npz')
     features_2 = scipy.sparse.load_npz(prefix + '/features_2.npz')
-    adjM = scipy.sparse.load_npz(prefix + '/adjM.npz')
-    type_mask = np.load(prefix + '/node_types.npy')
-    labels = np.load(prefix + '/labels.npy')
-    train_val_test_idx = np.load(prefix + '/train_val_test_idx.npz')
+    adjM = scipy.sparse.load_npz(prefix + '/adjM.npz')                  # 11616*11616 adj matrix. can have weight.
+    type_mask = np.load(prefix + '/node_types.npy')                     # (0 0 ... 1 1 ... 2 2 ...) with dim 11616
+    labels = np.load(prefix + '/labels.npy')                            # labels of M nodes witn dim 4278, 0, 1 or 2
+    train_val_test_idx = np.load(prefix + '/train_val_test_idx.npz')    # dict, keys = ['train_idx', 'val_idx', 'test_idx']
     return [[G00, G01], [G10, G11], [G20, G21]], \
            [[idx00, idx01], [idx10, idx11], [idx20, idx21]], \
            [features_0, features_1, features_2],\

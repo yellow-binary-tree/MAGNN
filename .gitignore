@@ -149,3 +149,10 @@ dmypy.json
 ### Example user template
 
 # IntelliJ project files
+
+# log files
+*.log
+*.out
+
+# data
+data/preprocessed/
