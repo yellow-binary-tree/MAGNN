@@ -153,6 +153,9 @@ dmypy.json
 # log files
 *.log
 *.out
+*.txt
+*.ipynb
 
 # data
-data/preprocessed/
+data/
+cache/

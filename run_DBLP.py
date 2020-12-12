@@ -17,6 +17,7 @@ lr = 0.005
 weight_decay = 0.001
 etypes_list = [[0, 1], [0, 2, 3, 1], [0, 4, 5, 1]]
 
+
 def run_model_DBLP(feats_type, hidden_dim, num_heads, attn_vec_dim, rnn_type,
                    num_epochs, patience, batch_size, neighbor_samples, repeat, save_postfix):
     adjlists, edge_metapath_indices_list, features_list, adjM, type_mask, labels, train_val_test_idx = load_DBLP_data()

@@ -33,7 +33,12 @@ def get_metapath_neighbor_pairs(M, type_mask, expected_metapaths):
             temp[np.ix_(type_mask == metapath[i], type_mask == metapath[i + 1])] = True
             temp[np.ix_(type_mask == metapath[i + 1], type_mask == metapath[i])] = True
             mask = np.logical_or(mask, temp)
-        partial_g_nx = nx.from_numpy_matrix((M * mask).astype(int))
+        # partial_g_nx = nx.from_numpy_matrix((M * mask).astype(int))
+        partial_g_nx = nx.from_numpy_matrix(np.multiply(M, mask))
+
+        # print("M: \n", M)
+        # print("mask: \n", mask)
+        # print('partial_g_nx matrix: \n', np.multiply(M, mask))
 
         # only need to consider the former half of the metapath
         # e.g., we only need to consider 0-1-2 for the metapath 0-1-2-1-0
@@ -47,7 +52,7 @@ def get_metapath_neighbor_pairs(M, type_mask, expected_metapaths):
                 if target in single_source_paths:
                     has_path = True
 
-                #if nx.has_path(partial_g_nx, source, target):
+                # if nx.has_path(partial_g_nx, source, target):
                 if has_path:
                     shortests = [p for p in nx.all_shortest_paths(partial_g_nx, source, target) if
                                  len(p) == (len(metapath) + 1) // 2]
@@ -91,5 +96,5 @@ def get_edge_metapath_idx_array(neighbor_pairs):
             edge_metapath_idx_array.extend(paths)
         edge_metapath_idx_array = np.array(edge_metapath_idx_array, dtype=int)
         all_edge_metapath_idx_array.append(edge_metapath_idx_array)
-        print(edge_metapath_idx_array.shape)
+        # print(edge_metapath_idx_array.shape)
     return all_edge_metapath_idx_array
