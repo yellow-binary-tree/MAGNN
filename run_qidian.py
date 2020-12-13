@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import json
 import datetime
 import argparse
 
@@ -79,7 +80,6 @@ def run_model_qidian(model, train_loader, valid_loader, valid_dataset, hps):
                 # print('node_indices1', node_indices1.shape)
                 # node_indices2 = np.where(combined_type_masks == 2)[0]
                 # print('node_indices2', node_indices2.shape)
-
 
                 combined_feature_lists = [cfl.to(device) for cfl in combined_feature_lists]
                 combined_metapath_indices_lists = [[indices.to(device) for indices in indices_list] for indices_list in combined_metapath_indices_lists]
@@ -212,8 +212,67 @@ def run_eval(model, valid_loader, valid_dataset, hps, best_loss, best_F, non_des
     return best_loss, best_F, non_descent_cnt, saveNo
 
 
+def run_test_qidian(model, test_loader, test_dataset, hps):
+    test_dir = os.path.join('save', hps.save_root, "test")      # make a subdir of the root dir for eval data
+    if not os.path.exists(test_dir):
+        os.makedirs(test_dir)
+    log_fname = os.path.join(test_dir, hps.dataset + '_' + hps.restore_model)
+    log_fd = open(log_fname, 'w', encoding='utf-8')
+
+    model.load_state_dict(torch.load(os.path.join('save', hps.save_root, hps.restore_model)))
+    model.eval()
+
+    # exp_uploader
+    exp = exp_uploader.Exp(proj_name=hps.proj_name, exp_name=hps.exp_name, command=str(hps))
+    exp_uploader.init_exp(exp)
+    if hps.use_exp_rouge:
+        test_vocab = Vocab(os.path.join('data/raw', hps.dataset, 'cache/test_vocab'), max_size=-1)
+
+    start_time = time.time()
+    with torch.no_grad():
+        logger.info("[Model] Sequence Labeling!")
+        tester = SLTester(model, hps, exp, test_dir=test_dir)
+        for j, data in enumerate(test_loader):
+            combined_g_lists, combined_metapath_indices_lists, combined_feature_lists, combined_type_masks, combined_extractable_nodes, combined_labels, indexs = data
+            combined_feature_lists = [cfl.to(device) for cfl in combined_feature_lists]
+            combined_metapath_indices_lists = [[indices.to(device) for indices in indices_list] for indices_list in combined_metapath_indices_lists]
+            combined_labels = combined_labels.to(device)
+            inputs = combined_g_lists, combined_feature_lists, combined_type_masks, combined_metapath_indices_lists
+            pred_idxs, hypss, refers = tester.evaluation(inputs, combined_extractable_nodes, combined_labels, indexs, valid_dataset)
+            for i, pred_idx, hyps, refer in zip(indexs, pred_idxs, hypss, refers):
+                log_fd.write(json.dumps({'index': i, 'pred_idx': pred_idx, 'hyps': hyps, 'refer': refer}, ensure_ascii=False) + '\n')
+            if j % 20 == 0:
+                exp_uploader.async_heart_beat(exp)
+
+    running_avg_loss = tester.running_avg_loss
+    logger.info("The number of pairs is %d", tester.rougePairNum)
+    if not tester.rougePairNum:
+        logger.error("During testing, no hyps is selected!")
+        sys.exit(1)
+
+    if hps.use_exp_rouge:
+        exp_server_hyps, exp_server_refer = result_word2id(
+            test_vocab, [chap.split('\n') for chap in tester.hyps], [chap.split('\n') for chap in tester.refer])
+        rouge_server.eval_rouge(hps.proj_name, hps.exp_name, 'decode_test_ckpt-{}'.format(hps.restore_model.split('_')[-1]),
+                                exp_server_hyps, exp_server_refer)
+
+    rouge = Rouge()
+    scores_all = rouge.get_scores(tester.hyps, tester.refer, avg=True)
+
+    res = "Rouge1:\n\tp:%.6f, r:%.6f, f:%.6f\n" % (scores_all['rouge-1']['p'], scores_all['rouge-1']['r'], scores_all['rouge-1']['f']) \
+        + "Rouge2:\n\tp:%.6f, r:%.6f, f:%.6f\n" % (scores_all['rouge-2']['p'], scores_all['rouge-2']['r'], scores_all['rouge-2']['f']) \
+        + "Rougel:\n\tp:%.6f, r:%.6f, f:%.6f\n" % (scores_all['rouge-l']['p'], scores_all['rouge-l']['r'], scores_all['rouge-l']['f'])
+    logger.info(res)
+    logger.info('[INFO] End of test | time: {:5.2f}s | test loss {:5.4f} | '.format((time.time() - start_time), float(running_avg_loss)))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='MRGNN testing for the DBLP dataset')
+
+    # run mode
+    parser.add_argument('--mode', type=str, default='train', help='running mode (train | test)')
+    parser.add_argument('--restore_model', type=str, default=None, help='model to restore (only works in test mode)')
+    parser.add_argument('--save_root', type=str, default=None, help='save root (only works in test mode)')
 
     # model
     parser.add_argument('--dropout_rate', type=float, default=0.5, help='dropout rate')
@@ -251,7 +310,6 @@ if __name__ == "__main__":
     parser.add_argument('--proj_name', type=str, default='wyq_structural_summ', help='Project Name')
     parser.add_argument('--exp_name', type=str, default='MAGNN', help='Experiment Name')
     parser.add_argument('--use_exp_rouge', type=bool, default=True, help='whether send decoded summ to the exp_server to get rouge')
-    parser.add_argument('--save_root', type=str, default='', help='Experiment Name')
 
     args = parser.parse_args()
 
@@ -284,7 +342,10 @@ if __name__ == "__main__":
     dataset = IterDataset(hps, embed)
     train_loader = torch.utils.data.DataLoader(dataset, batch_size=hps.batch_size, shuffle=False, num_workers=args.train_num_workers, collate_fn=graph_collate_fn, pin_memory=True)
     del dataset
-    valid_dataset = MapDataset(hps, embed, mode='val')
+    if args.mode == 'train':
+        valid_dataset = MapDataset(hps, embed, mode='val')
+    elif args.mode == 'test':
+        valid_dataset = MapDataset(hps, embed, mode='test')
     valid_loader = torch.utils.data.DataLoader(valid_dataset, batch_size=hps.batch_size, shuffle=False, collate_fn=graph_collate_fn, num_workers=args.eval_num_workers, pin_memory=True)
 
     # model
@@ -292,4 +353,8 @@ if __name__ == "__main__":
                      etypes_lists=args.expected_metapaths, feats_dim_list=[args.word_emb_dim]*3, hidden_dim=args.hidden_dim, out_dim=2,
                      num_heads=args.num_heads, attn_vec_dim=args.attn_vec_dim, rnn_type=args.rnn_type, dropout_rate=args.dropout_rate)
     model.to(device)
-    run_model_qidian(model, train_loader, valid_loader, valid_dataset, hps)
+
+    if args.mode == 'train':
+        run_model_qidian(model, train_loader, valid_loader, valid_dataset, hps)
+    elif args.mode == 'test':
+        run_test_qidian(model, valid_loader, valid_dataset, hps)
