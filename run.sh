@@ -15,8 +15,8 @@ if [ $mode == "debug" ]; then
         --num_heads 2 --hidden_dim 8 --attn_vec_dim 8 --gpu $gpu
 elif [ $mode == 'run' ]; then
     echo "running MAGNN"
-    python -u run_qidian.py --dataset $dataset --embedding_path "/share/wangyq/resources/Tencent_AILab_ChineseEmbedding_debug.txt" \
-        --train_num_workers 8 --eval_num_workers 8 --report_every 25 --exp_name MAGNN_$dataset --expected_metapaths "010,101,121,202,212"\
+    python -u run_qidian.py --dataset $dataset --embedding_path "/share/wangyq/resources/Tencent_AILab_ChineseEmbedding_200w.txt" \
+        --train_num_workers 16 --eval_num_workers 16 --exp_name MAGNN_$dataset --expected_metapaths "010,020,101,121,202,212"\
         --gpu $gpu
 
 fi

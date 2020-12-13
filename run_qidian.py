@@ -50,81 +50,85 @@ def run_model_qidian(model, train_loader, valid_loader, valid_dataset, hps):
     if not os.path.exists(model_save_dir):
         os.makedirs(model_save_dir)
 
-    for epoch in range(1, hps.epoch + 1):
-        epoch_start_time = time.time()
-        iters_elapsed_in_epoch = 0
-        epoch_loss = 0.0
-        train_loss = 0.0
-        for i, data in enumerate(train_loader):
-            iter_start_time = time.time()
-            model.train()
-            iters_elapsed_in_epoch += 1
-            iters_elapsed += 1
+    try:
+        for epoch in range(1, hps.epoch + 1):
+            epoch_start_time = time.time()
+            iters_elapsed_in_epoch = 0
+            epoch_loss = 0.0
+            train_loss = 0.0
+            for i, data in enumerate(train_loader):
+                iter_start_time = time.time()
+                model.train()
+                iters_elapsed_in_epoch += 1
+                iters_elapsed += 1
 
-            combined_g_lists, combined_metapath_indices_lists, combined_feature_lists, combined_type_masks, combined_extractable_nodes, combined_labels, indexs = data
+                combined_g_lists, combined_metapath_indices_lists, combined_feature_lists, combined_type_masks, combined_extractable_nodes, combined_labels, indexs = data
 
-            # print('combined_g_lists', combined_g_lists)
-            # for i, arrs in enumerate(combined_metapath_indices_lists):
-            #     for j, arr in enumerate(arrs):
-            #         print('combined_metapath_indices_lists', i, j, arr.shape, arr)
-            for i, arr in enumerate(combined_feature_lists):
-                print('combined_feature_lists', i, arr.shape)
-            print('combined_type_masks', combined_type_masks.shape, combined_type_masks.sum())
-            # print('combined_extractables', combined_extractable_nodes.shape, combined_extractable_nodes)
-            # print('combined_labels', combined_labels.shape, combined_labels)
-            node_indices0 = np.where(combined_type_masks == 0)[0]
-            print('node_indices0', node_indices0.shape)
-            node_indices1 = np.where(combined_type_masks == 1)[0]
-            print('node_indices1', node_indices1.shape)
-            node_indices2 = np.where(combined_type_masks == 2)[0]
-            print('node_indices2', node_indices2.shape)
+                # print('combined_g_lists', combined_g_lists)
+                # for i, arrs in enumerate(combined_metapath_indices_lists):
+                #     for j, arr in enumerate(arrs):
+                #         print('combined_metapath_indices_lists', i, j, arr.shape, arr)
+                # for i, arr in enumerate(combined_feature_lists):
+                #     print('combined_feature_lists', i, arr.shape)
+                # print('combined_type_masks', combined_type_masks.shape, combined_type_masks.sum())
+                # print('combined_extractables', combined_extractable_nodes.shape, combined_extractable_nodes)
+                # print('combined_labels', combined_labels.shape, combined_labels)
+                # node_indices0 = np.where(combined_type_masks == 0)[0]
+                # print('node_indices0', node_indices0.shape)
+                # node_indices1 = np.where(combined_type_masks == 1)[0]
+                # print('node_indices1', node_indices1.shape)
+                # node_indices2 = np.where(combined_type_masks == 2)[0]
+                # print('node_indices2', node_indices2.shape)
 
 
-            combined_feature_lists = [cfl.to(device) for cfl in combined_feature_lists]
-            combined_metapath_indices_lists = [[indices.to(device) for indices in indices_list] for indices_list in combined_metapath_indices_lists]
-            combined_labels = combined_labels.to(device)
-            inputs = combined_g_lists, combined_feature_lists, combined_type_masks, combined_metapath_indices_lists
-            logits, embeddings = model(inputs, combined_extractable_nodes)
-            # print('logits', logits.shape, logits)
-            # print('combined_labels', combined_labels.shape, combined_labels)
+                combined_feature_lists = [cfl.to(device) for cfl in combined_feature_lists]
+                combined_metapath_indices_lists = [[indices.to(device) for indices in indices_list] for indices_list in combined_metapath_indices_lists]
+                combined_labels = combined_labels.to(device)
+                inputs = combined_g_lists, combined_feature_lists, combined_type_masks, combined_metapath_indices_lists
+                logits, embeddings = model(inputs, combined_extractable_nodes)
+                # print('logits', logits.shape, logits)
+                # print('combined_labels', combined_labels.shape, combined_labels)
 
-            loss = criterion(logits, combined_labels).mean()
-            train_loss += float(loss.data)
-            epoch_loss += float(loss.data)
+                loss = criterion(logits, combined_labels).mean()
+                train_loss += float(loss.data)
+                epoch_loss += float(loss.data)
 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-            if iters_elapsed % hps.report_every == 0:
-                logger.info('       | end of iter {:3d} | time: {:5.2f}s | train loss {:5.4f} | '
-                            .format(iters_elapsed, (time.time() - iter_start_time), float(train_loss)))
-                train_loss = 0.0
+                if iters_elapsed % hps.report_every == 0:
+                    logger.info('       | end of iter {:3d} | time: {:5.2f}s | train loss {:5.4f} | '
+                                .format(iters_elapsed, (time.time() - iter_start_time), float(train_loss)))
+                    train_loss = 0.0
 
-            if iters_elapsed % hps.eval_after_iterations == 0:
-                save_model(model, os.path.join(model_save_dir, 'train_iter_'+str(iters_elapsed)))
-                best_loss, best_F, non_descent_cnt, saveNo = run_eval(model, valid_loader, valid_dataset, hps, best_loss, best_F, non_descent_cnt, saveNo, iters_elapsed, model_save_dir, exp)
-                if non_descent_cnt >= 3:
-                    logger.error("[Error] val loss does not descent for three times. Stopping supervisor...")
-                    save_model(model, os.path.join(model_save_dir, "earlystop"))
-                    return
-            time6 = time.time()
-            logger.debug('[DEBUG] iter %d, total time %.5f' % (iters_elapsed, (time6-iter_start_time)))
+                if iters_elapsed % hps.eval_after_iterations == 0:
+                    save_model(model, os.path.join(model_save_dir, 'train_iter_'+str(iters_elapsed)))
+                    best_loss, best_F, non_descent_cnt, saveNo = run_eval(model, valid_loader, valid_dataset, hps, best_loss, best_F, non_descent_cnt, saveNo, iters_elapsed, model_save_dir, exp)
+                    if non_descent_cnt >= 3:
+                        logger.error("[Error] val loss does not descent for three times. Stopping supervisor...")
+                        save_model(model, os.path.join(model_save_dir, "earlystop"))
+                        return
+                time6 = time.time()
+                logger.debug('[DEBUG] iter %d, total time %.5f' % (iters_elapsed, (time6-iter_start_time)))
 
-        epoch_avg_loss = epoch_loss / (iters_elapsed_in_epoch * hps.batch_size)
-        logger.info('   | end of epoch {:3d} | time: {:5.2f}s | epoch loss: {:5.2f}'
-                    .format(epoch, (time.time() - epoch_start_time), epoch_avg_loss))
+            epoch_avg_loss = epoch_loss / (iters_elapsed_in_epoch * hps.batch_size)
+            logger.info('   | end of epoch {:3d} | time: {:5.2f}s | epoch loss: {:5.2f}'
+                        .format(epoch, (time.time() - epoch_start_time), epoch_avg_loss))
 
-        if not best_train_loss or epoch_avg_loss < best_train_loss:
-            save_file = os.path.join(model_save_dir, "bestmodel")
-            logger.info('[INFO] Found new best model with %.3f running_train_loss. Saving to %s', float(epoch_avg_loss),
-                        save_file)
-            save_model(model, save_file)
-            best_train_loss = epoch_avg_loss
-        elif epoch_avg_loss >= best_train_loss:
-            logger.error("[Error] training loss does not descent. Stopping supervisor...")
-            save_model(model, os.path.join(model_save_dir, "earlystop"))
-            sys.exit(1)
+            if not best_train_loss or epoch_avg_loss < best_train_loss:
+                save_file = os.path.join(model_save_dir, "bestmodel")
+                logger.info('[INFO] Found new best model with %.3f running_train_loss. Saving to %s', float(epoch_avg_loss),
+                            save_file)
+                save_model(model, save_file)
+                best_train_loss = epoch_avg_loss
+            elif epoch_avg_loss >= best_train_loss:
+                logger.error("[Error] training loss does not descent. Stopping supervisor...")
+                save_model(model, os.path.join(model_save_dir, "earlystop"))
+                sys.exit(1)
+    except Exception as e:
+        save_model(model, os.path.join(model_save_dir, 'exception'))
+        raise e
 
 
 def run_eval(model, valid_loader, valid_dataset, hps, best_loss, best_F, non_descent_cnt, saveNo, iters_elapsed, model_save_dir, exp):
@@ -288,6 +292,4 @@ if __name__ == "__main__":
                      etypes_lists=args.expected_metapaths, feats_dim_list=[args.word_emb_dim]*3, hidden_dim=args.hidden_dim, out_dim=2,
                      num_heads=args.num_heads, attn_vec_dim=args.attn_vec_dim, rnn_type=args.rnn_type, dropout_rate=args.dropout_rate)
     model.to(device)
-
     run_model_qidian(model, train_loader, valid_loader, valid_dataset, hps)
-

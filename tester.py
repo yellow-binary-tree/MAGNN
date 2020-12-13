@@ -118,15 +118,14 @@ class SLTester(TestPipLine):
         for idx in index:
             examples.append(dataset.get_example(idx))
 
-        for i in range(self.hps.batch_size):
-            example = examples[i]
+        for i, example in enumerate(examples):
             original_article_sents = example['original_article_sents']
             sent_number = len(original_article_sents)
             sent_start_number = sum([len(e['original_article_sents']) for e in examples[:i]])
             refer = example['original_abstract']
 
             p_sent = combined_logits[sent_start_number:sent_start_number+sent_number, :]      # [sents_in_this_example, 2]
-            print('[WYQDEBUG] batch segment from %d to %d' % (sent_start_number, sent_start_number+sent_number))
+            # print('[WYQDEBUG] batch segment from %d to %d' % (sent_start_number, sent_start_number+sent_number))
             if self.m == 0:
                 prediction = p_sent.max(1)[1]    # [node]
                 pred_idx = torch.arange(sent_number)[prediction != 0].long()
@@ -148,8 +147,8 @@ class SLTester(TestPipLine):
                 self.match_true += ((prediction == label) & (prediction == 1)).sum()
                 self.match += (prediction == label).sum()
 
-            print('[WYQDEBUG] predictions in this segment: ', pred_idx)
-            print('[WYQDEBUG] labels in this segment: ', label)
+            # print('[WYQDEBUG] predictions in this segment: ', pred_idx)
+            # print('[WYQDEBUG] labels in this segment: ', label)
 
             self.total_sentence_num += sent_number
             self.example_num += 1

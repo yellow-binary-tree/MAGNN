@@ -6,7 +6,7 @@ dataset=$1
 src_folder=data/raw/$dataset
 dest_folder=data/preprocessed/$dataset
 
-num_proc=10
+num_proc=14
 
 echo "preprocessing dataset:" $dataset
 for i in `seq 1 $num_proc`

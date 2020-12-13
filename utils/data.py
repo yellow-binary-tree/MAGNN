@@ -246,7 +246,7 @@ class ExampleSet():
         self.graph_i = start_index - 1
         self.data_no += self.graph_i
         if self.graph_i > 0:
-            self.data_fd = open(os.path.join('data/raw', hps.dataset, 'data/train'+str(self.folder_i)+'.json'), encoding='utf-8')
+            self.data_list = readJson(os.path.join('data/raw', hps.dataset, 'data/train'+str(self.folder_i)+'.json'))
             for i in range(self.graph_i + 1):
                 self.data_fd.readline()
         logger.info("[INFO] starting at: data_no=%d, folder_i=%d, graph_i=%d" % (self.data_no, self.folder_i, self.graph_i))
@@ -262,12 +262,12 @@ class ExampleSet():
                     raise StopIteration
                 self.folder = os.path.join(self.graph_dir, 'train'+str(self.folder_i))
                 self.folder_records = len(os.listdir(self.folder))
-                self.data_fd = open(os.path.join('data/raw', self.hps.dataset, 'data/train'+str(self.folder_i)+'.json'), encoding='utf-8')
+                self.data_list = readJson(os.path.join('data/raw', self.hps.dataset, 'data/train'+str(self.folder_i)+'.json'))
             if self.data_no % self.num_workers == self.worker_id:
                 break
 
-        print('dataloader %d yielded datano %d, folder %d, graph %d' % (self.worker_id, self.data_no, self.folder_i, self.graph_i))
-        data_dict = json.loads(self.data_fd.readline())
+        # print('dataloader %d yielded datano %d, folder %d, graph %d' % (self.worker_id, self.data_no, self.folder_i, self.graph_i))
+        data_dict = self.data_list[self.graph_i]
         graph_folder = os.path.join(self.folder, str(self.graph_i))
         get_data_result = get_data(data_dict, graph_folder, self.embed, self.hps.expected_metapaths)
         get_data_result.append(self.data_no)
@@ -399,7 +399,7 @@ def graph_collate_fn(samples):
     # batched_graph = dgl.batch([graphs[idx] for idx in sorted_index])
     # return batched_graph, [index[idx] for idx in sorted_index]
     g_lists, edge_metapath_indices_lists, features_list, adj_mats, type_masks, extractables, labels, indexs = map(list, zip(*samples))
-    print('graph_collate index', indexs)
+    # print('graph_collate index', indexs)
     combined_g_lists = []
     # merge dgl graph
     for i in range(len(g_lists[0])):

@@ -159,3 +159,6 @@ dmypy.json
 # data
 data/
 cache/
+
+# save
+save
