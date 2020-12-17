@@ -338,7 +338,7 @@ def get_data(data_dict, graph_folder, embed, expected_metapaths):
 
     # 2. load features (word embedding) 一条记录中每个node（包括token、sent、chap三种类型）的初始word embedding
     nid2wid = json.load(open(os.path.join(graph_folder, 'nid2wid.json'), encoding='utf-8'))
-    wordids = torch.LongTensor(list(nid2wid.values()))
+    wordids = torch.LongTensor([nid2wid[str(i)] for i in range(len(nid2wid))])
     token_embeddings = embed(wordids).numpy()
     # print('wordids', wordids.shape, wordids)
     adj_mat = scipy.sparse.load_npz(os.path.join(graph_folder, 'adjM.npz'))
@@ -393,11 +393,6 @@ def graph_collate_fn(samples):
     :param batch: (G, input_pad)
     :return:
     '''
-    # graphs, index = map(list, zip(*samples))
-    # graph_len = [len(g.filter_nodes(lambda nodes: nodes.data["dtype"] == 1)) for g in graphs]  # sent node of graph
-    # sorted_len, sorted_index = torch.sort(torch.LongTensor(graph_len), dim=0, descending=True)
-    # batched_graph = dgl.batch([graphs[idx] for idx in sorted_index])
-    # return batched_graph, [index[idx] for idx in sorted_index]
     g_lists, edge_metapath_indices_lists, features_list, adj_mats, type_masks, extractables, labels, indexs = map(list, zip(*samples))
     # print('graph_collate index', indexs)
     combined_g_lists = []

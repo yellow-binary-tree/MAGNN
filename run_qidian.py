@@ -65,6 +65,7 @@ def run_model_qidian(model, train_loader, valid_loader, valid_dataset, hps):
 
                 combined_g_lists, combined_metapath_indices_lists, combined_feature_lists, combined_type_masks, combined_extractable_nodes, combined_labels, indexs = data
 
+                # print('inedxs', indexs)
                 # print('combined_g_lists', combined_g_lists)
                 # for i, arrs in enumerate(combined_metapath_indices_lists):
                 #     for j, arr in enumerate(arrs):
@@ -72,14 +73,8 @@ def run_model_qidian(model, train_loader, valid_loader, valid_dataset, hps):
                 # for i, arr in enumerate(combined_feature_lists):
                 #     print('combined_feature_lists', i, arr.shape)
                 # print('combined_type_masks', combined_type_masks.shape, combined_type_masks.sum())
-                # print('combined_extractables', combined_extractable_nodes.shape, combined_extractable_nodes)
+                # print('combined_extractable_nodes', combined_extractable_nodes.shape, combined_extractable_nodes)
                 # print('combined_labels', combined_labels.shape, combined_labels)
-                # node_indices0 = np.where(combined_type_masks == 0)[0]
-                # print('node_indices0', node_indices0.shape)
-                # node_indices1 = np.where(combined_type_masks == 1)[0]
-                # print('node_indices1', node_indices1.shape)
-                # node_indices2 = np.where(combined_type_masks == 2)[0]
-                # print('node_indices2', node_indices2.shape)
 
                 combined_feature_lists = [cfl.to(device) for cfl in combined_feature_lists]
                 combined_metapath_indices_lists = [[indices.to(device) for indices in indices_list] for indices_list in combined_metapath_indices_lists]
